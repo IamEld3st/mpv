@@ -104,6 +104,7 @@ typedef struct mkv_track {
 
     uint32_t v_width, v_height, v_dwidth, v_dheight;
     bool v_dwidth_set, v_dheight_set;
+    uint32_t v_dunit;
     double v_frate;
     uint32_t colorspace;
     int stereo_mode;
@@ -619,6 +620,10 @@ static void parse_trackvideo(struct demuxer *demuxer, struct mkv_track *track,
         track->v_dheight = video->display_height;
         track->v_dheight_set = true;
         MP_DBG(demuxer, "|   + Display height: %"PRIu32"\n", track->v_dheight);
+    }
+    if (video->n_display_unit) {
+        track->v_dunit = video->display_unit;
+        MP_DBG(demuxer, "|   + Display unit: %"PRIu32"\n", track->v_dunit);
     }
     if (video->n_pixel_width) {
         track->v_width = video->pixel_width;
@@ -1464,8 +1469,16 @@ static int demux_mkv_open_video(demuxer_t *demuxer, mkv_track_t *track)
                 track->codec_id, track->tnum);
     }
     sh_v->fps = track->v_frate;
-    sh_v->disp_w = track->v_width;
-    sh_v->disp_h = track->v_height;
+
+    // TODO: Add other types of DisplayUnit
+    if (track->v_dunit == 0) {
+        sh_v->disp_w = track->v_dwidth_set ? track->v_dwidth : track->v_width;
+        sh_v->disp_h = track->v_dheight_set ? track->v_dheight : track->v_height;
+    }
+    else {
+        sh_v->disp_w = track->v_width;
+        sh_v->disp_h = track->v_height;
+    }
 
     int dw = track->v_dwidth_set ? track->v_dwidth : track->v_width;
     int dh = track->v_dheight_set ? track->v_dheight : track->v_height;
